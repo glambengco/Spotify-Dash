@@ -211,6 +211,7 @@ app = dash.Dash(__name__,
                 # Set dark theme
                 external_stylesheets = [dbc.themes.LUX]
                 )
+server = app.server
 
 #-------------------- Variables for app layout --------------------#
 # Variables for app title
