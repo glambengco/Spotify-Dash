@@ -1,5 +1,4 @@
 import pandas as pd
-import os
 import plotly.express as px
 import dash
 from dash import dcc
@@ -14,8 +13,9 @@ CHART_THEME = 'plotly_white'
 
 # Read streaming history files and store into dataframe
 def files_to_dataframe():
-    files = os.listdir('./')
-    json_list = [f for f in files if f.startswith('StreamingHistory_music')]
+    file_1 = 'https://github.com/glambengco/Spotify-Dash/blob/main/StreamingHistory_music_0.json'
+    file_2 = 'https://github.com/glambengco/Spotify-Dash/blob/main/StreamingHistory_music_1.json'
+    json_list = [file_1, file_2]
     df_list = [pd.read_json(json_file) for json_file in json_list]
     df = pd.concat(df_list, axis=0)
 
