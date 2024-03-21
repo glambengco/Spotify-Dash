@@ -196,7 +196,16 @@ def time_by_day_of_week_on_month(df, year, month):
     
     return time_by_day_of_week(df_month, chart_title)
 
+#-------------------- Loading data --------------------#
+# Load streaming history data into dataframe
+streaming_history = files_to_dataframe()
 
+# Generate strings for dropdown options to filter by month
+monthly_data = group_by_year_month(streaming_history)
+year_month = pd.to_datetime(monthly_data['year'].astype(str) + '-' + monthly_data['month'].astype(str))
+for m in year_month:
+    option = {'label': m.strftime('%B %Y'), 'value': m.strftime('%Y %m')}
+    dropdown_options.append(option)
     
 
 
@@ -335,16 +344,5 @@ def update_output_container(input_month):
 
 # Run the Dash app
 if __name__ == '__main__':
-
-    #-------------------- Loading data --------------------#
-    # Load streaming history data into dataframe
-    streaming_history = files_to_dataframe()
-
-    # Generate strings for dropdown options to filter by month
-    monthly_data = group_by_year_month(streaming_history)
-    year_month = pd.to_datetime(monthly_data['year'].astype(str) + '-' + monthly_data['month'].astype(str))
-    for m in year_month:
-        option = {'label': m.strftime('%B %Y'), 'value': m.strftime('%Y %m')}
-        dropdown_options.append(option)
 
     app.run_server(debug=True)
