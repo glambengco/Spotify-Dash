@@ -200,15 +200,6 @@ def time_by_day_of_week_on_month(df, year, month):
 # Load streaming history data into dataframe
 streaming_history = files_to_dataframe()
 
-# Generate strings for dropdown options to filter by month
-monthly_data = group_by_year_month(streaming_history)
-year_month = pd.to_datetime(monthly_data['year'].astype(str) + '-' + monthly_data['month'].astype(str))
-for m in year_month:
-    option = {'label': m.strftime('%B %Y'), 'value': m.strftime('%Y %m')}
-    dropdown_options.append(option)
-    
-
-
 #-------------------- Dash app --------------------#
 # Initialize Dash app
 app = dash.Dash(__name__,
@@ -232,7 +223,12 @@ dropdown_label = 'Select month to analyze'
 # First element is option to select all data
 dropdown_options = [{'label': 'Select all data', 'value': 'all'}]
 
-
+# Generate strings for dropdown options to filter by month
+monthly_data = group_by_year_month(streaming_history)
+year_month = pd.to_datetime(monthly_data['year'].astype(str) + '-' + monthly_data['month'].astype(str))
+for m in year_month:
+    option = {'label': m.strftime('%B %Y'), 'value': m.strftime('%Y %m')}
+    dropdown_options.append(option)
 
 # Title style
 title_style = {'textAlign': 'center',
