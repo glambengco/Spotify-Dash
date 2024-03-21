@@ -3,3 +3,4 @@ plotly
 dash==2.16.1
 dash-bootstrap-components==1.5.0
 dash-bootstrap-templates==1.1.2
+gunicorn
