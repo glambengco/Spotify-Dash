@@ -268,7 +268,7 @@ app = dash.Dash(__name__,
                 external_stylesheets = [APP_THEME]
                 )
 # Use when deploying in render.com
- server = app.server
+server = app.server
 
 #-------------------- Variables for app layout --------------------#
 # Variables for app title
