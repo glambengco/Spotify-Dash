@@ -105,16 +105,18 @@ def top_songs_chart(df, n, chart_title, artist_label):
         artist_track = pd.Series(s)
         yaxis_format = dict(tickmode = 'array',
                             tickvals = df['trackName'],
-                            ticktext = artist_track
+                            ticktext = artist_track,
+                            fixedrange = True
                            )
     else:
-        yaxis_format = dict(ticksuffix = '  ')
+        yaxis_format = dict(ticksuffix = '  ', fixedrange = True)
 
     # Generate bar chart
     fig = px.bar(df, x = 'minPlayed', y = 'trackName') 
     fig.update_layout(title = chart_title,
                       xaxis_title = 'Total listening time (minutes)',
                       yaxis_title = '',
+                      xaxis = dict(fixedrange = True),
                       yaxis = yaxis_format,
                       margin = CHART_MARGIN,
                       template = CHART_THEME
@@ -141,9 +143,11 @@ def time_chart(df, chart_title):
                       xaxis = dict(tickmode = 'array', 
                                    tickvals = df['yearMonth'][::2],
                                    ticktext = xtick_labels[::2],
+                                   fixedrange = True
                                    ),
                       yaxis = dict(ticksuffix = '  ',
-                                   range = (0, df['minPlayed'].max()*1.2)
+                                   range = (0, df['minPlayed'].max()*1.2),
+                                   fixedrange = True
                                    ),
                       template = CHART_THEME
                       )
@@ -159,8 +163,12 @@ def time_by_day_of_week(df, chart_title):
     fig.update_layout(title = chart_title, 
                       xaxis_title = '',
                       yaxis_title = 'Average listening time (hours)',
-                      yaxis_range = [0, df_day_week['hrPlayed'].max()*1.2],
-                      xaxis = dict(tickprefix = '<br>'),
+                      xaxis = dict(tickprefix = '<br>', 
+                                   fixedrange = True
+                                   ),
+                      yaxis = dict(fixedrange = True,
+                                   range = (0, df_day_week['hrPlayed'].max()*1.2)
+                                   ),
                       margin = CHART_MARGIN,
                       template = CHART_THEME
                      )
