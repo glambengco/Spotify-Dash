@@ -244,7 +244,7 @@ title_style = {'textAlign': 'center',
 
 about_me_style = {'display': 'flex',
                  'flex-direction': 'column',
-                 'justify-content': 'center',
+                 'align-items': 'center',
                   'margin': 'auto', 
                   'width': '90%',
                   'max-width': '1080px',
