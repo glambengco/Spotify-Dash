@@ -80,7 +80,7 @@ def top_artists_chart(df, n, chart_title):
     fig.update_layout(title = chart_title,
                       xaxis_title = 'Total listening time (minutes)',
                       yaxis_title = '',
-                      xaxis = dict(fixedrange = True)
+                      xaxis = dict(fixedrange = True),
                       yaxis = dict(tickmode = 'array',
                                    tickvals = df['artistName'],
                                    ticktext = df['artistName'].str.slice(0, 20) + '  ',
