@@ -7,19 +7,23 @@ from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 from dash_bootstrap_templates import load_figure_template
 
-# Set parameters for chart style
+# Set parameters for app UI
+APP_THEME = dbc.themes.LUX
 CHART_MARGIN = dict(t = 100, b = 100, l=100, r=40)
 CHART_THEME = 'plotly_white'
 
 # Read streaming history files and store into dataframe
 def files_to_dataframe():
-    file_1 = 'https://raw.githubusercontent.com/glambengco/Spotify-Dash/main/StreamingHistory_music_0.json'
-    file_2 = 'https://raw.githubusercontent.com/glambengco/Spotify-Dash/main/StreamingHistory_music_1.json'
-    json_list = [file_1, file_2]
+    json_list = []
+    # Load my streaming history files from GitHub
+    json_list.append('https://raw.githubusercontent.com/glambengco/Spotify-Dash/main/StreamingHistory_music_0.json')
+    json_list.append('https://raw.githubusercontent.com/glambengco/Spotify-Dash/main/StreamingHistory_music_1.json')
+    
     df_list = [pd.read_json(json_file) for json_file in json_list]
-    df = pd.concat(df_list, axis=0)
+    df = pd.concat(df_list, axis = 0)
 
     df['endTime'] = pd.to_datetime(df['endTime'])
+    
     # Get year and month values and store into separate columns
     df['year'] = df['endTime'].dt.year
     df['month'] = df['endTime'].dt.month
@@ -28,6 +32,7 @@ def files_to_dataframe():
 
     return df
 
+#-------------------- Unit conversion functions --------------------#
 # Function to convert ms to minutes
 def ms_to_min(ms):
     return ms/(1000*60)
@@ -37,19 +42,19 @@ def ms_to_hr(ms):
     return ms/(1000*60*60)
 
 #-------------------- Grouping functions --------------------#
-# Function to group by artist
+# Function to group by artist and calculate total msPlayed
 def group_by_artist(df):
     return df.groupby('artistName')['msPlayed'].sum().reset_index()
 
-# Function to group by track
+# Function to group by track and calculate total msPlayed
 def group_by_track(df):
     return df.groupby(['artistName', 'trackName'])['msPlayed'].sum().reset_index()
 
-# Function to group by year and month
+# Function to group by year and month and calculate total msPlayed
 def group_by_year_month(df):
     return df.groupby(['year', 'month', 'monthName'])['msPlayed'].sum().reset_index()
 
-# Function to group by day of week
+# Function to group by day of week and calculate average msPlayed for each day of week
 def group_by_day_of_week(df):
     df['date'] = pd.to_datetime(df['endTime'].dt.date)
     df_day = df.groupby('date')['msPlayed'].sum().reset_index()
@@ -71,16 +76,14 @@ def top_artists_chart(df, n, chart_title):
     df = df.sort_values('msPlayed').tail(n)
     
     # Generate bar chart
-    fig = px.bar(df, 
-                 x = 'minPlayed', 
-                 y = 'artistName'
-                 )
+    fig = px.bar(df, x = 'minPlayed', y = 'artistName')
     fig.update_layout(title = chart_title,
                       xaxis_title = 'Total listening time (minutes)',
                       yaxis_title = '',
                       yaxis = dict(tickmode = 'array',
                                    tickvals = df['artistName'],
-                                   ticktext = df['artistName'].str.slice(0, 20) + '  '
+                                   ticktext = df['artistName'].str.slice(0, 20) + '  ',
+                                   'fixedrange' = True
                                    ),
                       margin = CHART_MARGIN,
                       template = CHART_THEME
@@ -107,10 +110,7 @@ def top_songs_chart(df, n, chart_title, artist_label):
         yaxis_format = dict(ticksuffix = '  ')
 
     # Generate bar chart
-    fig = px.bar(df,
-                 x = 'minPlayed', 
-                 y = 'trackName'
-                 ) 
+    fig = px.bar(df, x = 'minPlayed', y = 'trackName') 
     fig.update_layout(title = chart_title,
                       xaxis_title = 'Total listening time (minutes)',
                       yaxis_title = '',
@@ -130,11 +130,9 @@ def time_chart(df, chart_title):
 
     # Generate month and year strings for x-axis tick labels
     xtick_labels = '<br>' + df['monthName'].astype(str) + '<br>' + df['year'].astype(str)
-    
-    fig = px.line(df,
-                  x = 'yearMonth',
-                  y = df['minPlayed']
-                  )
+
+    # Generate line plot
+    fig = px.line(df, x = 'yearMonth', y = 'minPlayed')
     fig.update_layout(title = chart_title,
                       xaxis_title = '',
                       yaxis_title = 'Total listening time (minutes)',
@@ -156,10 +154,7 @@ def time_by_day_of_week(df, chart_title):
     df_day_week = group_by_day_of_week(df)
     df_day_week['hrPlayed'] = ms_to_hr(df_day_week['msPlayed'])
     
-    fig = px.bar(df_day_week,
-             x = 'dayName',
-             y = 'hrPlayed'
-            )
+    fig = px.bar(df_day_week, x = 'dayName', y = 'hrPlayed')
     fig.update_layout(title = chart_title, 
                       xaxis_title = '',
                       yaxis_title = 'Average listening time (hours)',
@@ -208,9 +203,10 @@ app = dash.Dash(__name__,
                             'content': 'width=device-width, initial-scale=1.0, maximum-scale=3.0, minimum-scale=0.5,'
                             }
                            ],
-                # Set dark theme
-                external_stylesheets = [dbc.themes.LUX]
+                # Set theme
+                external_stylesheets = [APP_THEME]
                 )
+# Use when deploying in render.com
 server = app.server
 
 #-------------------- Variables for app layout --------------------#
@@ -340,5 +336,4 @@ def update_output_container(input_month):
 
 # Run the Dash app
 if __name__ == '__main__':
-
     app.run_server(debug=True)
