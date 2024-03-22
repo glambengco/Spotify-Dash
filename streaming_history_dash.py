@@ -242,14 +242,24 @@ title_style = {'textAlign': 'center',
                'width': '100%'
                }
 
-# Dropdown menu Div style
-dropdown_div_style = {'width': '90%', 
-                  'max-width': '1080px', 
-                  'margin': 'auto',
+about_me_style = {'display': 'flex',
+                 'flex-direction': 'column',
+                 'justify-content': 'center',
+                  'margin': 'auto', 
+                  'width': '90%',
+                  'max-width': '1080px',
                   'margin-top': '20px',
                   'margin-bottom': '20px',
-                  'font-size': 20
                   }
+
+# Dropdown menu Div style
+dropdown_div_style = {'width': '90%', 
+                      'max-width': '1080px',
+                      'margin': 'auto',
+                      'margin-top': '20px',
+                      'margin-bottom': '20px',
+                      'font-size': 20
+                      }
 
 # Dropdown style
 dropdown_style = {'background': 'transparent'}
@@ -275,10 +285,13 @@ graph_style = {'max-width': '100%'}
 app.layout = html.Div([html.H1(app_title, 
                                style = title_style
                                ), 
-                       html.Label('by Gillano Lambengco'),
-                       html.A('Link to GitHub repo', 
-                              href = 'https://github.com/glambengco/Spotify-Dash/tree/main'
-                              ),
+                       html.Div([html.Label('by Gillano Lambengco'),
+                                 html.A('Link to GitHub repo', 
+                                        href = 'https://github.com/glambengco/Spotify-Dash/tree/main'
+                                        )
+                                 ],
+                                 style = about_me_style
+                                ),
                        # Div for dropdown menu
                        html.Div([html.Label(dropdown_label),
                                  dcc.Dropdown(id = 'dropdown-month',
