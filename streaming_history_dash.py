@@ -15,7 +15,7 @@ CHART_THEME = 'plotly_white'
 # Read streaming history files and store into dataframe
 def files_to_dataframe():
     json_list = []
-    # Load my streaming history files from GitHub
+    # Load my streaming history files from GitHub when deploying using render.com
     json_list.append('https://raw.githubusercontent.com/glambengco/Spotify-Dash/main/StreamingHistory_music_0.json')
     json_list.append('https://raw.githubusercontent.com/glambengco/Spotify-Dash/main/StreamingHistory_music_1.json')
     
@@ -275,6 +275,10 @@ graph_style = {'max-width': '100%'}
 app.layout = html.Div([html.H1(app_title, 
                                style = title_style
                                ), 
+                       html.Label('by Gillano Lambengco'),
+                       html.A('Link to GitHub repo', 
+                              href = 'https://github.com/glambengco/Spotify-Dash/tree/main'
+                              ),
                        # Div for dropdown menu
                        html.Div([html.Label(dropdown_label),
                                  dcc.Dropdown(id = 'dropdown-month',
