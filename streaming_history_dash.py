@@ -10,7 +10,7 @@ from dash_bootstrap_templates import load_figure_template
 # Set parameters for app UI
 APP_THEME = dbc.themes.LUX
 CHART_MARGIN = dict(t = 100, b = 100, l=100, r=40)
-px.defaults.template = "plotly"
+px.defaults.template = "plotly_white"
 
 # Read streaming history files and store into dataframe
 def files_to_dataframe():
@@ -49,44 +49,84 @@ def ms_to_min(ms):
 def ms_to_hr(ms):
     return ms/(1000*60*60)
 
-#-------------------- Grouping functions --------------------#
-# Function to group by artist and calculate total msPlayed
-def group_by_artist(df):
-    return df.groupby('artistName')['msPlayed'].sum().reset_index()
-
-# Function to group by track and calculate total msPlayed
-def group_by_track(df):
-    return df.groupby(['artistName', 'trackName'])['msPlayed'].sum().reset_index()
-
-# Function to group by year and month and calculate total msPlayed
-def group_by_year_month(df):
+#-------------------- Calculation functions --------------------#
+# Function to group by year and month, and calculate total msPlayed
+def total_by_year_month(df):
     return df.groupby(['year', 'month', 'monthName'])['msPlayed'].sum().reset_index()
 
-# Function to group by day of week and calculate average msPlayed
-def group_by_day_of_week(df):
-    df_day = df.groupby('date')['msPlayed'].sum().reset_index()
-    df_day['dayOfWeek'] = df_day['date'].dt.dayofweek
-    df_day['dayName'] = df_day['date'].dt.strftime('%a')
-    return df_day.groupby(['dayOfWeek', 'dayName'])['msPlayed'].mean().reset_index()
+# Function to group by date and calculate total msPlayed
+def total_by_date(df):
+    return df.groupby('date')['msPlayed'].sum().reset_index()
 
 # Function to group by weekday or weekend
-def group_by_weekday_weekend(df):
+def total_by_weekday_weekend(df):
     df['weekend'] = df['dayOfWeek'] > 4
     return df.groupby('weekend')['msPlayed'].sum().reset_index()
 
-# Function to group by hour and calculate average msPlayed
-def group_by_hour(df):
-    df['hour_12'] = df['endTime'].dt.strftime('%I %p')
-    df_day_hour = df.groupby(['date', 'hour', 'hour_12'])['msPlayed'].sum().reset_index()
-    return df_day_hour.groupby(['hour', 'hour_12'])['msPlayed'].mean().reset_index()
+# Function to group by date and hour, and calculate total msPlayed
+def total_by_hour(df):
+    return df.groupby(['date', 'hour'])['msPlayed'].sum().reset_index()
 
-# Function to group by artist
-def group_by_artist(df):
+# Function to create a tally of total msPlayed per day Some days have no usage so those days are not present in the original dataframe
+def get_date_tally(df_date):
+    # Get first and last day in dataframe then create date range
+    first_day = df_date.head(1)['date'].values[0]
+    last_day = df_date.tail(1)['date'].values[0]
+    dates = pd.date_range(start = first_day, end = last_day, name = 'date')
+    dates = pd.DataFrame(dates)
+    
+    # Fill date range with data from df_date, then fill date with empty msPlayed values with 0
+    return pd.merge(dates, df_date, on = 'date', how = 'left').fillna(0)
+
+# Function to create a tally of total msPlayed per hour on each day. Some hours of a day have no usage 
+# so those hours and days are not present in the original dataframe
+def get_hour_tally(df_hour):
+    # Get earliest and latest date and hour of the dataframe to create an hourly range
+    start_dt = '{} {}:00'.format(df_hour.head(1)['date'].values[0], df_hour.head(1)['hour'].values[0])
+    end_dt = '{} {}:00'.format(df_hour.tail(1)['date'].values[0], df_hour.head(1)['hour'].values[0])
+    hours = pd.date_range(start = start_dt, end = end_dt, freq = 'H', name = 'date_hour')
+    hours = pd.DataFrame(hours)
+
+    # Extract date and hour values of hourly range into separate columns
+    hours['date'] = hours['date_hour'].dt.date
+    hours['hour'] = hours['date_hour'].dt.hour
+    
+    # Combine date and hour values into one variable for both hourly range and data for easier merrging
+    df_hour['date_hour'] = df_hour['date'].astype(str) + ' ' + df_hour['hour'].astype(str)
+    hours['date_hour'] = df_hour['date'].astype(str) + ' ' + df_hour['hour'].astype(str)
+    
+    # Fill hourly range with data from df_hour, then fill date with empty msPlayed values with 0
+    df_merged =  pd.merge(hours, df_hour[['date_hour', 'msPlayed']], on = 'date_hour', how = 'left').fillna(0)
+    return df_merged[['date', 'hour', 'msPlayed']]
+
+# Function to calculate average listening time by day of week
+def average_by_day_of_week(df):
+    df_date = total_by_date(df)
+    date_tally = get_date_tally(df_date)
+    date_tally['dayOfWeek'] = date_tally['date'].dt.dayofweek
+    date_tally['dayName'] = date_tally['date'].dt.strftime('%a')
+    return date_tally.groupby(['dayOfWeek', 'dayName'])['msPlayed'].mean().reset_index()
+
+# Function to calculate average listening time by hour
+def average_by_hour(df):
+    df_hour = total_by_hour(df)
+    hour_tally = get_hour_tally(df_hour)
+    return hour_tally.groupby('hour')['msPlayed'].mean().reset_index()
+
+# Function to group by artist and calculate total msPlayed
+def total_by_artist(df):
     return df.groupby('artistName')['msPlayed'].sum().reset_index()
 
-# Function to group by track
-def group_by_track(df):
+def get_top_artists(df, n):
+    return total_by_artist(df).sort_values('msPlayed', ascending = False).head(n)
+
+# Function to group by track and calculate total msPlayed
+def total_by_track(df):
     return df.groupby(['artistName', 'trackName'])['msPlayed'].sum().reset_index()
+
+# Function to get top tracks
+def get_top_tracks(df, n):
+    return total_by_track(df).sort_values('msPlayed', ascending = False).head(n)
 
 #-------------------- Filtering functions --------------------#
 # Function to filter by month
@@ -96,9 +136,9 @@ def filter_by_month(df, year, month):
 #-------------------- Main plotting functions --------------------#
 
 # Function to plot total listening time by month
-def time_by_month(df):
-    # Group by year and month
-    df = group_by_year_month(df)
+def plot_total_by_month(df):
+    # Get total time by year and month
+    df = total_by_year_month(df)
     df['minPlayed'] = ms_to_min(df['msPlayed'])
     df['yearMonth'] = df['year'].astype(str) + '-' + df['month'].astype(str)
 
@@ -124,9 +164,9 @@ def time_by_month(df):
     return fig
 
 # Function to plot average listening time by day of week
-def time_by_day_of_week(df):
-    # Group by day of week
-    df_day_week = group_by_day_of_week(df)
+def plot_average_by_day_of_week(df):
+    # Get aberage time by day of week
+    df_day_week = average_by_day_of_week(df)
     df_day_week['hrPlayed'] = ms_to_hr(df_day_week['msPlayed'])
 
     # Generate bar chart
@@ -146,9 +186,9 @@ def time_by_day_of_week(df):
     return fig
 
 # Function to plot total listening time by wekday or weekend
-def time_by_weekday_weekend(df):
-    # Group by weekday or weekend
-    df_weekday_weekend = group_by_weekday_weekend(df)
+def plot_total_by_weekday_weekend(df):
+    # Get total time by weekday or weekend
+    df_weekday_weekend = total_by_weekday_weekend(df)
     df_weekday_weekend['hrPlayed'] = ms_to_hr(df_weekday_weekend['msPlayed'])
 
     # Generate pie chart
@@ -167,9 +207,9 @@ def time_by_weekday_weekend(df):
     return fig
 
 # Function to plot average listening time by hour
-def time_by_hour(df):
-    # Group by hour
-    df_hour = group_by_hour(df)
+def plot_average_by_hour(df):
+    # Get average time by hour
+    df_hour = average_by_hour(df)
     df_hour['minPlayed'] = ms_to_min(df_hour['msPlayed'])
 
     # Generate strings for x-axis tick labels
@@ -184,8 +224,8 @@ def time_by_hour(df):
                       xaxis_title = '',
                       yaxis_title = 'Average listening time (minutes)',
                       xaxis = dict(tickmode = 'array', 
-                                   tickvals = df_hour['hour'][::3],
-                                   ticktext = xtick_labels[::3],
+                                   tickvals = df_hour['hour'][::2],
+                                   ticktext = '<br>' + xtick_labels[::2],
                                    fixedrange = True
                                    ),
                       yaxis = dict(fixedrange = True,
@@ -197,20 +237,17 @@ def time_by_hour(df):
     return fig
 
 # Function to plot top artists
-def top_artists_chart(df, n):
-    # Group by artists and get top n artists
-    df = group_by_artist(df)
+def plot_top_artists(df, n):
+    # Get total time by artist and get top n artists
+    df = get_top_artists(df, n).sort_values('msPlayed')
     df['minPlayed'] = ms_to_min(df['msPlayed'])
-    df = df.sort_values('msPlayed').tail(n)
     
     # Generate bar chart
     fig = px.bar(df, x = 'minPlayed', y = 'artistName')
     fig.update_layout(title = 'Top {} Most Played Artists'.format(n),
                       xaxis_title = 'Total listening time (minutes)',
                       yaxis_title = '',
-                      xaxis = dict(ticksuffix = '  ', 
-                                   fixedrange = True
-                                   ),
+                      xaxis = dict(fixedrange = True),
                       yaxis = dict(tickmode = 'array',
                                    tickvals = df['artistName'],
                                    ticktext = df['artistName'].str.slice(0, 20) + '  ',
@@ -222,11 +259,10 @@ def top_artists_chart(df, n):
     return fig
 
 # Function to generate top songs chart
-def top_songs_chart(df, n, artist_label):
-    # Group by track and get top n tracks
-    df = group_by_track(df).sort_values('msPlayed').tail(n)
+def plot_top_songs(df, n, artist_label):
+    # Get total time by track and get top n tracks
+    df = df = get_top_tracks(df, n).sort_values('msPlayed')
     df['minPlayed'] = ms_to_min(df['msPlayed'])
-    df = df.sort_values('msPlayed').tail(n)
     
     # IF artist_abel set to true, artist anme of each track will be displayed in chart
     if artist_label == True:
@@ -256,20 +292,6 @@ def top_songs_chart(df, n, artist_label):
 # Load streaming history data into dataframe
 streaming_history = files_to_dataframe()
 
-#-------------------- Dash app --------------------#
-# Initialize Dash app
-app = dash.Dash(__name__,
-                # meta tags for responsive web layout
-                meta_tags=[{'name': 'viewport',
-                            'content': 'width=device-width, initial-scale=1.0, maximum-scale=3.0, minimum-scale=0.5,'
-                            }
-                           ],
-                # Set theme
-                external_stylesheets = [APP_THEME]
-                )
-# Use when deploying in render.com
-server = app.server
-
 #-------------------- Variables for app layout --------------------#
 # Variables for app title
 app_title = 'Spotify Streaming History Dashboard'
@@ -287,7 +309,7 @@ dropdown_label = 'Select month to analyze'
 dropdown_options = [{'label': 'Select all data', 'value': 'all'}]
 
 # Generate strings for dropdown options to filter by month
-monthly_data = group_by_year_month(streaming_history)
+monthly_data = total_by_year_month(streaming_history)
 year_month = pd.to_datetime(monthly_data['year'].astype(str) + '-' + monthly_data['month'].astype(str))
 for m in year_month:
     option = {'label': m.strftime('%B %Y'), 'value': m.strftime('%Y %m')}
@@ -337,7 +359,21 @@ chart_display = {'display': 'flex',
 # Graph style
 graph_style = {'max-width': '100%'}
 
-#-------------------- Variables for app layout --------------------#
+#-------------------- Dash app --------------------#
+# Initialize Dash app
+app = dash.Dash(__name__,
+                # meta tags for responsive web layout
+                meta_tags=[{'name': 'viewport',
+                            'content': 'width=device-width, initial-scale=1.0, maximum-scale=3.0, minimum-scale=0.5,'
+                            }
+                           ],
+                # Set theme
+                external_stylesheets = [APP_THEME]
+                )
+# Use when deploying in render.com
+server = app.server
+
+#-------------------- Create app layout --------------------#
 app.layout = html.Div([html.H1(app_title, 
                                style = title_style
                                ), 
@@ -372,19 +408,20 @@ app.layout = html.Div([html.H1(app_title,
               )
 
 def update_output_container(input_month):
+    # Function to set output chart as dcc.Graph object and enclose in an html.Div
     def format_output(fig):
         return html.Div(dcc.Graph(figure = fig), style = graph_style)
     
     n = 5
 
     if input_month == 'all':
-        
-        chart_1 = format_output(top_artists_chart(streaming_history, n))
-        chart_2 = format_output(top_songs_chart(streaming_history, n, artist_label=True))
-        chart_3 = format_output(time_by_month(streaming_history))
-        chart_4 = format_output(time_by_day_of_week(streaming_history))
-        chart_5 = format_output(time_by_weekday_weekend(streaming_history))
-        chart_6 = format_output(time_by_hour(streaming_history))
+        # Generate charts for streaming history
+        chart_1 = format_output(plot_top_artists(streaming_history, n))
+        chart_2 = format_output(plot_top_songs(streaming_history, n, artist_label=True))
+        chart_3 = format_output(plot_total_by_month(streaming_history))
+        chart_4 = format_output(plot_average_by_day_of_week(streaming_history))
+        chart_5 = format_output(plot_total_by_weekday_weekend(streaming_history))
+        chart_6 = format_output(plot_average_by_hour(streaming_history))
 
         return html.Div(className='chart-item', 
                         children=[chart_1, chart_2, chart_3, chart_4, chart_5, chart_6],
@@ -392,17 +429,18 @@ def update_output_container(input_month):
                        )
     
     elif input_month != 'Select month': 
+        # Get year and month values
         i = str(input_month)
         year = int(i.split()[0])
         month = int(i.split()[1])
 
         df_month = filter_by_month(streaming_history, year, month)
-
-        chart_1 = format_output(top_artists_chart(df_month, n))
-        chart_2 = format_output(top_songs_chart(df_month, n, artist_label=True))
-        chart_3 = format_output(time_by_day_of_week(df_month))
-        chart_4 = format_output(time_by_weekday_weekend(df_month))
-        chart_5 = format_output(time_by_hour(df_month))
+        # Generate charts for specified year and month
+        chart_1 = format_output(plot_top_artists(df_month, n))
+        chart_2 = format_output(plot_top_songs(df_month, n, artist_label=True))
+        chart_3 = format_output(plot_average_by_day_of_week(df_month))
+        chart_4 = format_output(plot_total_by_weekday_weekend(df_month))
+        chart_5 = format_output(plot_average_by_hour(df_month))
 
         return html.Div(className='chart-item', 
                         children=[chart_1, chart_2, chart_3, chart_4, chart_5],
